@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Settings">
+
+    <EditText
+        android:id="@+id/timeText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="50dp"
+        android:ems="10"
+        android:hint="שניות עד גילוי במפה"
+        android:inputType="number"
+        android:gravity="right"
+        android:textAlignment="gravity"/>
+
+    <Switch
+        android:id="@+id/roads"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_below="@id/timeText"
+        android:layout_marginTop="40dp"
+        android:text="כבישים" />
+
+    <Switch
+        android:id="@+id/pictures"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_below="@id/roads"
+        android:layout_marginTop="20dp"
+        android:text="תמונות" />
+
+    <Switch
+        android:id="@+id/status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_below="@id/pictures"
+        android:layout_marginTop="20dp"
+        android:text="הצג הכל" />
+
+    <Button
+        android:id="@+id/savesettings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/status"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="80dp"
+        android:text="שמור" />
+
+</RelativeLayout>
