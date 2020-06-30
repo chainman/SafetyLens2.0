@@ -38,6 +38,7 @@
         android:layout_marginStart="44dp"
         android:layout_marginBottom="64dp"
         android:text="שמאל"
+        android:background="gr"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
