@@ -18,25 +18,22 @@ import java.util.List;
 public class CustomPolygon {
 
     private List<LatLng> latLngs; //List of coordinates
-    private final boolean MOVABLE; //Static/Movable
     private PolygonOptions polygon;
     GoogleMap map;
     private Polygon polygons;
+    String key; //Name of firing area
 
     //Set of coordinates and state of the polygon
     //Make sure received list is array list
-    public CustomPolygon(List<LatLng> ll) {
+    public CustomPolygon(List<LatLng> ll, String key) {
         latLngs = ll;
-        MOVABLE = false;
         polygon = new PolygonOptions();
         for(LatLng l : ll)
             polygon.add(l);
-        if(!MOVABLE){
-            polygon.fillColor(0x9900ff00).strokeWidth(0);
-        }
+        polygon.fillColor(0x9900ff00).strokeWidth(0);
         polygon.zIndex(1);
+        this.key = key;
     }
-
 
     public PolygonOptions getPolygon() {
         return polygon;
@@ -59,4 +56,5 @@ public class CustomPolygon {
         polygons.remove();
     }
 
+    public String getKey() { return key;}
 }

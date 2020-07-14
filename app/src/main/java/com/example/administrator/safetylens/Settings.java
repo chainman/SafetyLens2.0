@@ -2,9 +2,8 @@ package com.example.administrator.safetylens;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.view.MotionEvent;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.EditText;
@@ -12,33 +11,28 @@ import android.widget.Switch;
 
 public class Settings extends AppCompatActivity {
 
-    static boolean pictures = true,roads = true,status = false; //Pictures if want to save photos and roads if want to show roads options and status to allow to save when red
-    static long seconds = 8; //Time to reveal photo options
+    static boolean pictures = false,status = true; //Pictures if want to save photos and roads if want to show roads options and status to allow to save when red
+    //FIXME: Turn pictures to true when done testing
+    static long seconds = 5; //Time to reveal photo options
     Switch picture,road,state;
     EditText editText;
+
+    static boolean maps = true;
+    Switch map;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
-
-        picture = findViewById(R.id.pictures);
         road = findViewById(R.id.roads);
+        picture = findViewById(R.id.pictures);
         state = findViewById(R.id.status);
         picture.toggle();
-        road.toggle();
         picture.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 // do something, the isChecked will be
                 // true if the switch is in the On position
                 pictures=isChecked;
-            }
-        });
-        road.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                // do something, the isChecked will be
-                // true if the switch is in the On position
-                roads=isChecked;
             }
         });
         state.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -56,6 +50,16 @@ public class Settings extends AppCompatActivity {
               catch (NumberFormatException n){n.printStackTrace();}
             }
         });
+
+        map = findViewById(R.id.switchMaps);
+        map.toggle();
+        map.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                // do something, the isChecked will be
+                // true if the switch is in the On position
+                maps=isChecked;
+            }
+        });
     }
 
     private void goToMain() {startActivity(new Intent(this,MainActivity.class));}
@@ -66,7 +70,6 @@ public class Settings extends AppCompatActivity {
         super.onResume();
         editText.setText(seconds+"");
         state.setChecked(status);
-        road.setChecked(roads);
         picture.setChecked(pictures);
     }
 }

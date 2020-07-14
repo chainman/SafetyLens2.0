@@ -24,19 +24,22 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:text="בחר שטח אש"
+        android:text="שם פעילות"
         android:textColor="#FFFFFF"
         android:textSize="20sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/logoImg" />
+        app:layout_constraintTop_toBottomOf="@+id/logoImg"
+        />
 
-    <Spinner
+    <EditText
         android:id="@+id/place"
         android:layout_width="300dp"
         android:layout_height="40dp"
         android:layout_marginTop="32dp"
         android:background="@drawable/ic_rectangle_2"
+        android:hint="הקלד"
+        android:textAlignment="center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/shoot" />
@@ -119,12 +122,15 @@
         android:id="@+id/editText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:hint="5 קמ"
+        android:hint="הזן מרחק"
         android:textColor="#EEEEEE"
+        android:textAlignment="center"
         app:layout_constraintBottom_toTopOf="@+id/startBtn"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/targetDistance" />
+        app:layout_constraintTop_toBottomOf="@+id/targetDistance"
+        android:inputType="number"
+        />
 
     <ImageView
         android:id="@+id/txtLine"
@@ -134,6 +140,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.53"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/editText" />
+        app:layout_constraintTop_toBottomOf="@+id/editText"
+        android:visibility="gone"/>
 
 </android.support.constraint.ConstraintLayout>

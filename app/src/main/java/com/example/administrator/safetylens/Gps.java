@@ -7,11 +7,8 @@ import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.location.LocationProvider;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
-import android.util.Log;
-import android.view.View;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
@@ -31,7 +28,7 @@ public class  Gps implements LocationListener {
     private Criteria criteria;
     private MainActivity contextCompat;
     private LatLng latLng;
-    CustomPolygonList customPolygonList;
+
 
     public double getLon(){
         return lon;
@@ -47,9 +44,8 @@ public class  Gps implements LocationListener {
 
 
     //Requests permission from user, in case of GPS, it need to be requested programmatically.
-    public Gps(MainActivity contextCompat1, CustomPolygonList customPolygons) {
+    public Gps(MainActivity contextCompat1) {
         contextCompat = contextCompat1;
-        customPolygonList = customPolygons;
 
         locationManager = (LocationManager) contextCompat.getSystemService(Context.LOCATION_SERVICE);
         Criteria criteria = new Criteria();
@@ -74,10 +70,6 @@ public class  Gps implements LocationListener {
     @Override
     public void onLocationChanged(Location location) {
         this.latLng = new LatLng(location.getLatitude(),location.getLongitude());
-        try {
-            ;//setCurrentPolygon();
-        }catch (Exception e){e.printStackTrace();}
-
     }
 
     @Override
@@ -99,7 +91,7 @@ public class  Gps implements LocationListener {
      * Sets current polygon based on location, and notifies users
      * It is assumed that none overlap (test excluded)
      * If key is already set, passes, as will occur in most scenarios
-     */
+
     private void setCurrentPolygon(){
         if(customPolygonList.getMap().get(MainActivity.key).isIn(latLng))
             return;
@@ -110,5 +102,5 @@ public class  Gps implements LocationListener {
                 return;
             }
         MainActivity.key = "";
-    }
+    }*/
 }

@@ -1,6 +1,8 @@
 package com.example.administrator.safetylens;
 
+import android.annotation.SuppressLint;
 import android.graphics.Color;
+import android.location.Location;
 
 import com.google.android.gms.maps.model.Dash;
 import com.google.android.gms.maps.model.Gap;
@@ -9,8 +11,10 @@ import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.RoundCap;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +41,8 @@ public class Funnel{
     Map<String, PolylineOptions> lines;
     float angleTarget = 60;
     List<PatternItem> pattern = Arrays.asList(new Dash(30), new Gap(20));
+    String note = " ";
+    int drillPolygonCounter;
 
     /**
      * Constructor for Funnel,
@@ -44,26 +50,40 @@ public class Funnel{
      */
     public Funnel (LatLng FiringPoint){
         //mMap = Gmap;
-        timestamp = MainActivity.timestamp;
         firingPoint = FiringPoint;
         leftAngle = MainActivity.data.leftAngle;
         rightAngle = MainActivity.data.rightAngle;
         //polygonList = customPolygonList;
         points = new HashMap<String,LatLng>();
         lines = new HashMap<String,PolylineOptions>();
-        addBasicPoints(30);
-        if(MainActivity.targetOrArea == FireType.AREA)
+        timestamp = new SimpleDateFormat("dd MM yyyy hh:mm:ss").format(new Date());
+        points.put("FiringPoint",firingPoint);
+        if(!MainActivity.targetVisible)
             addAreaPolygon(30);
         else
             addTargetPolygon(30);
+
+        drillPolygonCounter = 1;
     }
 
-    /**
-     * Creates a Polygon based upon the targeting option
-     * @param step
-     */
-    private void addBasicPoints(float step) {
-        points.put("FiringPoint",MainActivity.gps.getLatLng());
+    @SuppressLint("SimpleDateFormat")
+    public Funnel (LatLng FiringPoint, float bearing){
+        firingPoint = FiringPoint;
+        points = new HashMap<String,LatLng>();
+        lines = new HashMap<String,PolylineOptions>();
+        timestamp =  new SimpleDateFormat("dd MM yyyy hh:mm:ss").format(new Date());
+        points.put("FiringPoint",firingPoint);
+        addMotionPolygon(30, bearing ,firingPoint);
+    }
+
+    @SuppressLint("SimpleDateFormat")
+    public Funnel (LatLng FiringPoint, LatLng target){
+        firingPoint = FiringPoint;
+        points = new HashMap<String,LatLng>();
+        lines = new HashMap<String,PolylineOptions>();
+        timestamp =  new SimpleDateFormat("dd MM yyyy hh:mm:ss").format(new Date());
+        points.put("FiringPoint",firingPoint);
+        addMotionPolygon(30, bearing(firingPoint,target) ,firingPoint);
     }
 
     /**
@@ -72,7 +92,10 @@ public class Funnel{
      */
     private void addTargetPolygon(float step) {
         float angle = MainActivity.data.getTargetAngle();
+
         points.put("Target",fullRangePoint(getFiringPoint(),MainActivity.targetDistance,angle));
+        MapsActivity.target = fullRangePoint(getFiringPoint(),MainActivity.targetDistance,angle);
+
         points.put("LeftShort",fullRangePoint(getFiringPoint(),(0.5/6371.0)*(180.0/Math.PI),plus(angle,-30)));
         points.put("RightShort",fullRangePoint(getFiringPoint(),(0.5/6371.0)*(180.0/Math.PI),plus(angle,30)));
         points.put("Left",fullRangePoint(getFiringPoint(),MainActivity.height,plus(angle,-24)));
@@ -89,9 +112,46 @@ public class Funnel{
 
         lines.put("Target",new PolylineOptions().add(getFiringPoint(),getTarget()).color(Color.BLACK).endCap(new RoundCap()).startCap(new RoundCap()).pattern(pattern));
 
-        lines.put("LeftCurve",addCurvedLine(plus(angle,-36),plus(angle,-24),false,step));
-        lines.put("Curve",addCurvedLine(plus(angle,-24),plus(angle,24),true,step));
-        lines.put("RightCurve",addCurvedLine(plus(angle,24),plus(angle,36),false,step));
+        lines.put("LeftCurve",addCurvedLine(plus(angle,-36),plus(angle,-24),false,step,false));
+        lines.put("Curve",addCurvedLine(plus(angle,-24),plus(angle,24),true,step,false));
+        lines.put("RightCurve",addCurvedLine(plus(angle,24),plus(angle,36),false,step,false));
+
+        int i=0;
+        for(LatLng point:lines.get("LeftCurve").getPoints()){
+            points.put("LeftCurve"+i,point);
+            i++;
+        }i=0;
+        for(LatLng point:lines.get("Curve").getPoints()) {
+            points.put("Curve"+i, point);
+            i++;
+        }i=0;
+        for(LatLng point:lines.get("RightCurve").getPoints()) {
+            points.put("RightCurve"+i, point);
+            i++;
+        }
+    }
+
+    public void addMotionPolygon(float step, float angle, LatLng firingPoint){
+        points.put("Target",MapsActivity.target);
+        points.put("LeftShort",fullRangePoint(firingPoint,(0.5/6371.0)*(180.0/Math.PI),plus(angle,-30)));
+        points.put("RightShort",fullRangePoint(firingPoint,(0.5/6371.0)*(180.0/Math.PI),plus(angle,30)));
+        points.put("Left",fullRangePoint(firingPoint,MainActivity.height,plus(angle,-24)));
+        points.put("Right",fullRangePoint(firingPoint,MainActivity.height,plus(angle,24)));
+        points.put("FarLeft",fullRangePoint(firingPoint,MainActivity.height,plus(angle,-36)));
+        points.put("FarRight",fullRangePoint(firingPoint,MainActivity.height,plus(angle,36)));
+
+        lines.put("FarLeft",new PolylineOptions().add(firingPoint,getCertainPoint("FarLeft")).color(Color.BLACK).endCap(new RoundCap()).startCap(new RoundCap()).pattern(pattern));
+        lines.put("Left",new PolylineOptions().add(getCertainPoint("LeftShort"),getCertainPoint("Left")).color(Color.BLACK).endCap(new RoundCap()).startCap(new RoundCap()));
+        lines.put("LeftShort",new PolylineOptions().add(firingPoint,getCertainPoint("LeftShort")).color(Color.BLACK).endCap(new RoundCap()).startCap(new RoundCap()));
+        lines.put("FarRight",new PolylineOptions().add(firingPoint,getCertainPoint("FarRight")).color(Color.BLACK).endCap(new RoundCap()).startCap(new RoundCap()).pattern(pattern));
+        lines.put("Right",new PolylineOptions().add(getCertainPoint("RightShort"),getCertainPoint("Right")).color(Color.BLACK).endCap(new RoundCap()).startCap(new RoundCap()));
+        lines.put("RightShort",new PolylineOptions().add(getFiringPoint(),getCertainPoint("RightShort")).color(Color.BLACK).endCap(new RoundCap()).startCap(new RoundCap()));
+
+        //lines.put("Target",new PolylineOptions().add(getFiringPoint(),getTarget()).color(Color.BLACK).endCap(new RoundCap()).startCap(new RoundCap()).pattern(pattern));
+
+        lines.put("LeftCurve",addCurvedLine(plus(angle,-36),plus(angle,-24),false,step,false));
+        lines.put("Curve",addCurvedLine(plus(angle,-24),plus(angle,24),true,step,false));
+        lines.put("RightCurve",addCurvedLine(plus(angle,24),plus(angle,36),false,step,false));
 
         int i=0;
         for(LatLng point:lines.get("LeftCurve").getPoints()){
@@ -109,7 +169,7 @@ public class Funnel{
     }
 
     public LatLng getFiringPoint(){return firingPoint;} //Get firing point
-    private LatLng getCertainPoint(String key){return (LatLng)points.get(key);} //Return point based upon key value
+    public LatLng getCertainPoint(String key){return (LatLng)points.get(key);} //Return point based upon key value
     public LatLng getTarget(){return (LatLng)points.get("Target");}
 
     public PolylineOptions[] getLines(){//Returns all Polyline Options
@@ -132,6 +192,29 @@ public class Funnel{
 
     public void setStatus(Status status) {
         this.status = status;
+    }
+
+    public void setStatus(CustomPolygon currentPolygon,Map<String,CustomPolygon> map){
+        setStatus(Funnel.Status.GREEN);
+        //LatLng[] points = funnel.getPoints();
+        for(LatLng ll : points.values())
+            if(!currentPolygon.isIn(ll)){ //No status change
+                //(Green) if doesn't go in,
+                for(String key:map.keySet()){
+                    if(!key.equals(MainActivity.key)){
+                        if(map.get(key).isIn(ll)){
+                            setStatus(Funnel.Status.YELLOW);
+                            break;
+                        }else
+                        { //It wasn't yellow or in the fire zone. Therefore, it is red.
+                            setStatus(Funnel.Status.RED);
+                            break;
+                        }
+                    }
+                }
+                if(getStatus().equals(Funnel.Status.RED))//We know that it out of all boundaries, so no point in checking any farther
+                    break;
+            }
     }
 
     /**
@@ -176,14 +259,14 @@ public class Funnel{
 
     /**
      * Adds polygon to map, after the data is received from other classes. Creates it and styles it.
-     * Create all four focus points - location, left, farthest, right. Farthest is only used as reference, to be displayed on as part of radius
      * Create lines between them and then add curve.
      * After, validate if the area is ok to fire.
      */
+    private float arcLength, focalAngle;
     private void addAreaPolygon(float step){
-        float focalAngle = calculateFarthest(); //The main angle the funnel is based upon
-        float arcLength = Math.abs((rightAngle-leftAngle)%360); //Distance between Right and Left
-        if(arcLength>180) arcLength-=180;
+        focalAngle = plus(rightAngle,-plus(rightAngle,-leftAngle)/2);//calculateFarthest(); //The main angle the funnel is based upon
+        arcLength = Math.abs((rightAngle-leftAngle)%360); //Distance between Right and Left
+        //if(arcLength>180) arcLength-=180;
 
         points.put("LeftShort",fullRangePoint(getFiringPoint(),(0.5/6371.0)*(180.0/Math.PI),MainActivity.data.getLeftAngle()));
         points.put("RightShort",fullRangePoint(getFiringPoint(),(0.5/6371.0)*(180.0/Math.PI),MainActivity.data.getRightAngle()));
@@ -199,9 +282,13 @@ public class Funnel{
         lines.put("Right",new PolylineOptions().add(getCertainPoint("RightShort"),getCertainPoint("Right")).color(Color.BLACK).endCap(new RoundCap()).startCap(new RoundCap()));
         lines.put("RightShort",new PolylineOptions().add(getFiringPoint(),getCertainPoint("RightShort")).color(Color.BLACK).endCap(new RoundCap()).startCap(new RoundCap()));
 
-        lines.put("LeftCurve",addCurvedLine(plus(focalAngle,(float)-0.6*arcLength),plus(focalAngle, (float) (arcLength*-0.4)),false,step));
-        lines.put("Curve",addCurvedLine(plus(focalAngle, (float) (arcLength*-0.4)),plus(focalAngle, (float) (arcLength*0.4)),true,step));
-        lines.put("RightCurve",addCurvedLine(plus(focalAngle, (float) (arcLength*0.4)),plus(focalAngle, (float) (arcLength*0.6)),false,step));
+        lines.put("Curve",addCurvedLine(plus(focalAngle, (float) (arcLength*0.4)),plus(focalAngle, (float) (arcLength*-0.4)),true,step));
+        if(arcLength<300){
+            lines.put("LeftCurve",addCurvedLine(plus(focalAngle, (float) (arcLength*-0.4)),plus(focalAngle,(float)-0.6*arcLength),false,step));
+            lines.put("RightCurve",addCurvedLine(plus(focalAngle, (float) (arcLength*0.6)),plus(focalAngle, (float) (arcLength*0.4)),false,step));
+        }else{
+            lines.put("RemainingCurve",addCurvedLine(leftAngle,rightAngle,false,step));
+        }
 
         int i=0;
          for(LatLng point:lines.get("LeftCurve").getPoints()){
@@ -216,78 +303,27 @@ public class Funnel{
             points.put("RightCurve"+i, point);
             i++;
         }
+
+        if(MainActivity.fireType.equals(FireType.DRILL))
+            for(PolylineOptions line:lines.values())
+                line.color(0x500000ff);
+
+        //if(MainActivity.targetOrArea.equals(FireType.DRILL_RESUME)) insideBoundaries();
     }
 
-    /*
-    private void blah(float step) {
-        left = callNewBoundary(z,c,MainActivity.data.leftAngle,true);//fullRangePoint(MainActivity.gps.getLatLng(),MainActivity.height,MainActivity.data.getLeftAngle());
-        right = callNewBoundary(z,c,MainActivity.data.rightAngle,false);//fullRangePoint(MainActivity.gps.getLatLng(),MainActivity.height,MainActivity.data.getRightAngle());
-
-        leftClose = fullRangePoint(MainActivity.gps.getLatLng(),z,MainActivity.data.getLeftAngle());
-        rightClose = fullRangePoint(MainActivity.gps.getLatLng(),z,MainActivity.data.getRightAngle());
-
-        farthest = fullRangePoint(MainActivity.gps.getLatLng(),MainActivity.height, calculateFarthest());
-
-        List<LatLng> llList = new ArrayList<>();
-        llList.add(left); llList.add(MainActivity.gps.getLatLng()); llList.add(right); llList.add(leftClose); llList.add(rightClose); //llList.add(farthest);
-        ///////////
-        leftShort = new PolylineOptions().add(MainActivity.gps.getLatLng(),leftClose).color(Color.BLACK).endCap(new RoundCap()).startCap(new RoundCap());
-        rightShort = new PolylineOptions().add(MainActivity.gps.getLatLng(),rightClose).color(Color.BLACK).endCap(new RoundCap()).startCap(new RoundCap());
-        leftLong = new PolylineOptions().add(leftClose,left).color(Color.BLACK).endCap(new RoundCap()).startCap(new RoundCap());
-        rightLong = new PolylineOptions().add(rightClose,right).color(Color.BLACK).endCap(new RoundCap()).startCap(new RoundCap());
-        mMap.addPolyline(leftShort); mMap.addPolyline(rightShort); mMap.addPolyline(leftLong); mMap.addPolyline(rightLong);
-        curve = addCurvedLine(plus(MainActivity.data.leftAngle,-c/2),plus(MainActivity.data.rightAngle,c/2),true,step).startCap(new RoundCap()).endCap(new RoundCap());
-        llList.addAll(curve.getPoints());
-        //mMap.addMarker(new MarkerOptions().position(farthest));
-        ///////////
-        PolylineOptions[] offsets = addOffset(step);
-        leftOffset = offsets[0];
-        rightOffset = offsets[1];
-        llList.addAll(leftOffset.getPoints()); llList.addAll(rightOffset.getPoints());llList.addAll(rightArc.getPoints());llList.addAll(leftArc.getPoints());
-    }*/
-
-    /**
-     * @returns current firing area
-     **/
-    /*
-    public CustomPolygon findCurrentArea() {
-        for(CustomPolygon polygon:polygonList.values())
-            if(polygon.isIn(firingPoint))
-                return polygon;
-            return null;
-    }*/
-
-    /**
-     * Sets offsets and arcs for left and right, if they meet, it flips it to outer direction
-     * Line1 is for the left & Line2 is for right
-     * @param  - how many steps in arc
-     * @return the left and right offset polyline
-     */
-    /*
-    private PolylineOptions[] addOffset(float step){
-        List<PatternItem> pattern = Arrays.asList(new Dash(30), new Gap(20));
-        float angle = Math.abs(MainActivity.data.leftAngle-MainActivity.data.rightAngle);
-        if (angle>180)
-            angle = 360 - angle;
-        //float temp = MainActivity.data.leftAngle;
-        //MainActivity.data.setLeftAngle(MainActivity.data.getRightAngle());
-        //MainActivity.data.setRightAngle(temp);
-        angle=angle/2;
-        PolylineOptions line1 = new PolylineOptions(), line2 = new PolylineOptions();
-        if(equals(plus(MainActivity.data.leftAngle,angle),plus(MainActivity.data.rightAngle,-angle),angle/step*5 )){
-            line1.add(fullRangePoint(getFiringPoint(),MainActivity.height,plus(MainActivity.data.leftAngle,plus(-angle,c)))).add(getFiringPoint()).pattern(pattern);
-            leftArc = addCurvedLine(plus(MainActivity.data.leftAngle,plus(-angle,c/2)),MainActivity.data.leftAngle,false,step);
-            line2.add(fullRangePoint(getFiringPoint(),MainActivity.height,plus(MainActivity.data.rightAngle,plus(angle,-c)))).add(getFiringPoint()).pattern(pattern);
-            rightArc = addCurvedLine(plus(MainActivity.data.rightAngle,plus(angle,-c/2)),MainActivity.data.rightAngle,false,step);
-        }else {
-            line1.add(fullRangePoint(getFiringPoint(),MainActivity.height,plus(MainActivity.data.leftAngle,plus(angle,-c)))).add(getFiringPoint()).pattern(pattern);
-            leftArc = addCurvedLine(plus(MainActivity.data.leftAngle,plus(angle,-c/2)),MainActivity.data.leftAngle,false,step);
-            line2.add(fullRangePoint(getFiringPoint(),MainActivity.height,plus(MainActivity.data.rightAngle,plus(-angle,c)))).add(getFiringPoint()).pattern(pattern);
-            rightArc = addCurvedLine(plus(MainActivity.data.rightAngle,plus(-angle,c/2)),MainActivity.data.rightAngle,false,step);
+    private void insideBoundaries() {
+        float originalRight = MapsActivity.originalRight, originalLeft = MapsActivity.originalLeft;
+        float farRight = plus(focalAngle,(float)0.6*arcLength), farLeft = plus(focalAngle,(float)-0.6*arcLength);
+        if(originalRight - originalLeft > 0){
+            if(farRight < originalRight &&  farLeft > originalLeft)
+                for(PolylineOptions line : lines.values())
+                    line.color(Color.GREEN);
+        }else{
+            if((farRight > 0 && farRight < originalRight) && (farLeft <360 && farLeft > originalLeft))
+                for(PolylineOptions line : lines.values())
+                    line.color(Color.GREEN);
         }
-        mMap.addPolyline(line1);mMap.addPolyline(line2);
-        return new PolylineOptions[]{line1,line2};
-    }*/
+    }
 
     private float calculateFarthest() {
         float a = MainActivity.data.getLeftAngle();
@@ -306,10 +342,10 @@ public class Funnel{
      * @param lines - how many lines we want in curve
      * @return the polylineOption so system can check if all points are in
      */
-    public PolylineOptions addCurvedLine(float left, float right,boolean solid, float lines){
+    public PolylineOptions addCurvedLine(float left, float right,boolean solid, float lines, boolean f){
         PolylineOptions options = new PolylineOptions();
         //options.add(start);
-        for(float i:points(left,right,lines))
+        for(float i:points(left,right,lines,false))
             options.add(fullRangePoint(getFiringPoint(),MainActivity.height,i));
         //options.add(end);
         if(!solid){
@@ -319,6 +355,48 @@ public class Funnel{
         return options;
     }
 
+    public List<Float> points(float p1, float p2, float num, boolean f){
+        List<Float> list = new ArrayList<>();
+        float distance = Math.abs(p1-p2);
+        if(distance > 180 ) distance = 360 - distance;
+        if(Math.abs((p1+distance)%360-p2)<0.1)//abs(p1+distance)=p2
+            for(float angle=p1,step=distance/num,i=0;i<=num;angle+=step,i++)
+            {
+                if(angle>=360) angle-=360;
+                list.add(angle);
+            }
+        else
+            for(float angle=p1,step=distance/num,i=0;i<=num;angle-=step,i++)
+            {
+                if(angle<=0) angle+=360;
+                list.add(angle);
+            }
+        return list;
+    }
+
+
+    /**
+     * Creates and adds the curved line to the polygon
+     * @param left - starting point
+     * @param right - ending point
+     * @param solid - if the polyline is solid
+     * @param lines - how many lines we want in curve
+     * @return the polylineOption so system can check if all points are in
+     */
+    public PolylineOptions addCurvedLine(float right, float left,boolean solid, float lines){
+        PolylineOptions options = new PolylineOptions();
+        //options.add(start);
+        for(float i:points(right,left,lines))//Points go from right to left, therefore forgoing to decide which one came first
+            options.add(fullRangePoint(getFiringPoint(),MainActivity.height,i));
+        //options.add(end);
+        if(!solid){
+            List<PatternItem> pattern = Arrays.asList(new Dash(30), new Gap(20));
+            options.pattern(pattern);}
+        //mMap.addPolyline(options);
+        return options;
+    }
+
+    /*
     public List<Float> points(float p1, float p2, float num){
         List<Float> list = new ArrayList<>();
         float distance = Math.abs(p1-p2);
@@ -334,6 +412,16 @@ public class Funnel{
             {
                 if(angle<=0) angle+=360;
                 list.add(angle);
+            }
+        return list;
+    }*/
+
+    public List<Float> points(float p1, float p2, float num){
+        List<Float> list = new ArrayList<>();
+        float distance = (p1-p2)%360;
+        for(float angle = p1, step = distance/num,i=0; i<=num; angle-=step,i++) {
+            if(angle<=0) angle+=360;
+            list.add(angle);
             }
         return list;
     }
@@ -430,7 +518,63 @@ public class Funnel{
      */
     public boolean equals(float f1, float f2, float epsilon){return Math.abs(f1-f2)<epsilon;}
 
+    public LatLng targetFunnelFiringPoint(LatLng location,LatLng target){
+        float theta = (float) Math.toRadians(bearing(location,target));
 
-enum Status {GREEN,YELLOW,RED}
+        double x = location.latitude + MainActivity.height * Math.cos(theta);
+        double y = location.longitude + MainActivity.height * Math.sin(theta);
+
+        return new LatLng(x,y);
+    }
+
+    private float bearing(LatLng location, LatLng target){
+        //return (float) Math.atan2(-(location.latitude-target.latitude),(location.longitude-target.longitude));
+        Location l1 = new Location(""),l2 = new Location("");
+
+        l1.setLatitude(location.latitude);
+        l1.setLongitude(location.longitude);
+
+        l2.setLatitude(target.latitude);
+        l2.setLongitude(target.longitude);
+
+        return l1.bearingTo(l2);
+    }
+
+    public String getNote(){return note;}
+
+    public void setNotes(String toString) {
+        note = toString;
+    }
+
+    /**
+     * In drill resume, sets it to more of a background to distinguish between polygons
+     */
+    public void setColorsToSaveInDrill() {
+        int color = calculateNextColor();
+        for(PolylineOptions line: lines.values())
+            line.color(color);
+    }
+
+    private int calculateNextColor(){
+        int color;
+        try {
+            color = Color.argb(230 - drillPolygonCounter * 5,128 + drillPolygonCounter * 5,drillPolygonCounter * 5,128 + drillPolygonCounter * 5);
+        }catch (Exception e){
+            drillPolygonCounter = 1;
+            color = Color.argb(230 - drillPolygonCounter * 5,128 + drillPolygonCounter * 5,drillPolygonCounter * 5,128 + drillPolygonCounter * 5);
+        }
+        drillPolygonCounter++;
+        return color;
+    }
+
+    /**
+     * When polygon is created, shows user which is the new one
+     */
+    public void setColorToNew() {
+        for(PolylineOptions line: lines.values())
+            line.color(0x500ff0ff);
+    }
+
+    enum Status {GREEN,YELLOW,RED}
 
 }

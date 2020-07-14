@@ -5,12 +5,11 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CheckBox;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+
 import java.util.List;
 
 /**
@@ -23,7 +22,6 @@ public class PolygonOptionsListAdapter extends RecyclerView.Adapter<PolygonOptio
     List<PolylineOptions[]> polylines;
 
     public PolygonOptionsListAdapter(List<String> timestamps, GoogleMap mMap, List<PolylineOptions[]> polylineOptionsList){
-
         list = timestamps;
         map = mMap;
         polylines = polylineOptionsList;
@@ -40,25 +38,6 @@ public class PolygonOptionsListAdapter extends RecyclerView.Adapter<PolygonOptio
     @Override
     public void onBindViewHolder(@NonNull MyViewHolder holder, int position) {
         holder.textView.setText(list.get(position));
-        /*final CheckBox checkBox = holder.checkBox;
-        final int p = position;
-        checkBox.setText(list.get(p));
-        checkBox.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(checkBox.isChecked())
-                    for(PolylineOptions polylineOptions:polylines.get(p))
-                        map.addPolyline(polylineOptions);
-                else{
-                    Polyline polyline;
-                    for(PolylineOptions polylineOptions:polylines.get(p)) {
-                        polyline = map.addPolyline(polylineOptions);
-                        polyline.remove();
-                    }
-                }
-
-            }
-        });*/
     }
 
     @Override

@@ -1,17 +1,50 @@
 package com.example.administrator.safetylens;
 
+import android.content.Context;
+
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.maps.android.data.kml.KmlContainer;
+import com.google.maps.android.data.kml.KmlLayer;
+import com.google.maps.android.data.kml.KmlPlacemark;
+
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Stores all raw data of firing areas
  */
 public class FiringAreaData {
-    private Map<String, double[]> firingData;
-    FiringAreaData(){
-        firingData = new HashMap<>();
+    private Map<String, ArrayList<LatLng>> firingData;
+
+    FiringAreaData(Context context, GoogleMap mMap){
+        firingData = new HashMap<String, ArrayList<LatLng>>();
         //firingData.put("",new double[]{});
-        firingData.put("123א",new double[]{35.70878,	33.2291,	35.70905,	33.22969,	35.70945,	33.22901,	35.70958,	33.22868,	35.70958,	33.22676,	35.70945,	33.22654,	35.70945,	33.22609,	35.70958,	33.22586,	35.70958,	33.22541,	35.70971,	33.22528,	35.70972,	33.22507,	35.70986,	33.22495,
+
+        List<LatLng> latLngList = new ArrayList<>();
+        try {
+            KmlLayer layer = new KmlLayer(mMap, R.raw.firing_areas, context);
+            layer.addLayerToMap();
+            for(KmlContainer container:layer.getContainers())
+                for(KmlContainer nestedContainer : container.getContainers()){
+                    if(nestedContainer.hasPlacemarks())
+                        for(KmlPlacemark placemark:nestedContainer.getPlacemarks()){
+                            firingData.put(placemark.getProperty("name"),(ArrayList<LatLng>) placemark.getGeometry().getGeometryObject());
+                        }
+                }
+            layer.removeLayerFromMap();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    Map<String, ArrayList<LatLng>> getFiringData(){return firingData;}
+}
+/*
+firingData.put("123א",new double[]{35.70878,	33.2291,	35.70905,	33.22969,	35.70945,	33.22901,	35.70958,	33.22868,	35.70958,	33.22676,	35.70945,	33.22654,	35.70945,	33.22609,	35.70958,	33.22586,	35.70958,	33.22541,	35.70971,	33.22528,	35.70972,	33.22507,	35.70986,	33.22495,
                 35.70986,	33.22495,	35.71012,	33.22450,	35.71012,	33.22439,	35.71052,	33.22417,	35.71066,	33.22404,	35.71147,	33.22404,	35.71161,	33.22415,	35.71214,	33.22438,	35.71228,	33.22438,	35.71242,	33.22449,	35.71255,	33.22449,	35.71269,	33.22470,
                 35.71283,	33.22483,	35.71282,	33.22492,	35.71309,	33.22516,	35.71336,	33.22528,	35.71444,	33.22527,	35.71471,	33.2250,	35.71498,	33.22550,	35.71498,	33.22561,	35.71526,	33.22573,	35.71552,	33.22594,	35.71552,	33.22617,	35.71566,	33.22629,
                 35.71565,	33.22639,	35.71592,	33.2262,	35.71592,	33.22685,	35.71606,	33.22708,	35.71606,	33.22719,	35.71619,	33.22730,	35.71619,	33.22741,	35.71647,	33.22763,	35.71674,	33.2275,	35.71714,	33.22786,	35.71795,	33.22785,	35.71809,	33.22797,
@@ -31,9 +64,4 @@ public class FiringAreaData {
         firingData.put("133",new double[]{35.86387,	32.92181,	35.85416,	32.93023,	35.86144,	32.93450,	35.86213,	32.93429,	35.86243,	32.93384,	35.86324,	32.93351,	35.86355,	32.93292,	35.86422,	32.93272,	35.87140,	32.92742});
         firingData.put("62",new double[]{34.98447,	33.83601,	34.97990,	33.83667,	34.81227,	33.92125,	34.88145,	33.97786,	34.98413,	33.00314});
         firingData.put("30",new double[]{34.88311,	33.71533,	34.94294,	33.71500,	34.92752,	33.68168,	32.68165});
-
-
-    }
-
-    Map<String,double[]> getFiringData(){return firingData;}
-}
+ */

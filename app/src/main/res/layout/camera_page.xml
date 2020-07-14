@@ -8,18 +8,18 @@
     tools:layout_editor_absoluteY="81dp">
 
     <FrameLayout
-        android:id="@+id/cameraLayout"
+        android:id="@+id/cameraLayout1"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/direction"
-        app:layout_constraintStart_toStartOf="@+id/direction"
+        app:layout_constraintEnd_toStartOf="@+id/direction1"
+        app:layout_constraintStart_toStartOf="@+id/direction1"
         app:layout_constraintTop_toTopOf="parent">
 
     </FrameLayout>
 
     <TextView
-        android:id="@+id/x"
+        android:id="@+id/x1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="190dp"
@@ -31,28 +31,30 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <Button
-        android:id="@+id/buttonLeft"
+    <ImageButton
+        android:id="@+id/buttonLeft1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="44dp"
         android:layout_marginBottom="64dp"
         android:text="שמאל"
+        android:background="@drawable/left"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <Button
-        android:id="@+id/buttonRight"
+    <ImageButton
+        android:id="@+id/buttonRight1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="36dp"
         android:text="ימין"
-        app:layout_constraintBottom_toBottomOf="@+id/buttonLeft"
+        android:background="@drawable/right"
+        app:layout_constraintBottom_toBottomOf="@+id/buttonLeft1"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/buttonLeft" />
+        app:layout_constraintTop_toTopOf="@+id/buttonLeft1" />
 
     <TextView
-        android:id="@+id/direction"
+        android:id="@+id/direction1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
@@ -61,18 +63,18 @@
         android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/cameraLayout" />
+        app:layout_constraintTop_toTopOf="@+id/cameraLayout1" />
 
-    <Button
-        android:id="@+id/buttonTarget"
+    <ImageButton
+        android:id="@+id/buttonTarget1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="160dp"
+        android:background="@drawable/target"
         android:text="מטרה"
-        app:layout_constraintBottom_toBottomOf="@+id/buttonLeft"
+        app:layout_constraintBottom_toBottomOf="@+id/buttonLeft1"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/buttonLeft"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/buttonLeft1"
         app:layout_constraintVertical_bias="1.0" />
-
 
 </android.support.constraint.ConstraintLayout>

@@ -1,6 +1,7 @@
 package com.example.administrator.safetylens;
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -12,13 +13,16 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -30,71 +34,49 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
 
     Camera camera; //Camera handler
     FrameLayout frameLayout;
-    Button left,right,target;
-    int count; //Check how many sides were clicked, after so move to next activity
-    static String directory = Environment.getExternalStorageDirectory().getAbsolutePath(),direction=""; //+/temp
-    static float degrees;
+    ImageButton left,right,target;
+    static String directory = Environment.getExternalStorageDirectory().getAbsolutePath(),direction="";
+    static float degrees, motionAngle;
+    static double motionLength;
+    static int motionCount;
     SensorManager sensorManager;
     TextView angle;
+    AlertDialog motionDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_camera);
+        getSupportActionBar().hide();
+        setContentView(R.layout.camera_page);
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        count = 0;
-        /*OnSwipeTouchListener onSwipeTouchListener = new OnSwipeTouchListener(this)
-        {
-            @Override
-            public void onSwipeLeft() { goToMain(); } //Cycle to Main
-                                                     //This cycle is Map-Main-Camera-Map-Main...
-            @Override
-            public void onSwipeRight() { goToMap(); }//Cycle to Map
-        };
-
-        findViewById(R.id.cameraLayout).setOnTouchListener(onSwipeTouchListener);*/
-        frameLayout = findViewById(R.id.cameraLayout);
-        angle = findViewById(R.id.direction);
+        frameLayout = findViewById(R.id.cameraLayout1);
+        angle = findViewById(R.id.direction1);
         try {
-            right = findViewById(R.id.buttonRight);
+            right = findViewById(R.id.buttonRight1);
             right.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    count++;
-                    if (count == 1) { //Take picture, if pressed first
-                        right.setVisibility(View.INVISIBLE);
-                        MainActivity.data.setRightAngle(degrees);
-                        direction = "right";
-                        takePicture();
-                    } else {
-                        secondClickOptions();
-                        MainActivity.data.setRightAngle(degrees);
-                        direction = "right";
-                        takePicture();
-                    }
+                    MainActivity.data.setRightAngle(degrees);
+                    direction = "right";
+                    left.setVisibility(View.VISIBLE);
+                    takePicture();
+                    rightToReset();
                 }
             });
-            left = findViewById(R.id.buttonLeft);
+            left = findViewById(R.id.buttonLeft1);
+            left.setImageResource(R.drawable.left);
             left.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(View v) {
-                    count++;
-                    if (count == 1) {
-                        left.setVisibility(View.INVISIBLE);
-                        MainActivity.data.setLeftAngle(degrees);
-                        direction = "left";
-                        takePicture();
-                    } else {
-                        secondClickOptions();
-                        MainActivity.data.setLeftAngle(degrees);
-                        direction = "left";
-                        takePicture();
-                    }
+                public void onClick(View view) {
+                    MainActivity.data.setLeftAngle(degrees);
+                    direction="left";
+                    takePicture();
+                    leftToMap();
                 }
             });
         }catch (Exception e){Toast.makeText(this,"נסה שנית", Toast.LENGTH_SHORT).show();}
 
-        target = findViewById(R.id.buttonTarget);
+        target = findViewById(R.id.buttonTarget1);
         target.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -109,16 +91,62 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
         left.bringToFront();
         target.bringToFront();
 
-        if(MainActivity.targetOrArea==FireType.AREA)
-            target.setVisibility(View.INVISIBLE);
-        else{
-            left.setVisibility(View.INVISIBLE);
+        if(MainActivity.fireType == FireType.TARGET || MainActivity.fireType == FireType.MOTION) {
+            target.setVisibility(View.VISIBLE);
             right.setVisibility(View.INVISIBLE);
+            left.setVisibility(View.INVISIBLE);
+        } else{
+            left.setVisibility(View.INVISIBLE);
+            right.setVisibility(View.VISIBLE);
+            target.setVisibility(View.INVISIBLE);
         }
 
-        findViewById(R.id.x).bringToFront();
+        findViewById(R.id.x1).bringToFront();
         camera = getCameraInstance();
         frameLayout.addView(new CameraPreview(this,camera));
+    }
+
+    public void rightToReset(){
+        right.setImageResource(R.drawable.return_button);
+        right.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                MainActivity.data.setRightAngle(0f);
+                MainActivity.data.setLeftAngle(0f);
+                left.setVisibility(View.INVISIBLE);
+                right.setImageResource(R.drawable.right);
+                right.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        MainActivity.data.setRightAngle(degrees);
+                        direction="right";
+                        left.setVisibility(View.VISIBLE);
+                        takePicture();
+                        rightToReset();
+                    }
+                });
+                left.setImageResource(R.drawable.left);
+                left.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        MainActivity.data.setLeftAngle(degrees);
+                        direction="left";
+                        takePicture();
+                        leftToMap();
+                    }
+                });
+            }
+        });
+    }
+
+    public void leftToMap(){
+        left.setImageResource(R.drawable.ic_tomap);
+        left.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                goToMap();
+            }
+        });
     }
 
     //Confirming if angle is ok for target
@@ -127,15 +155,9 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
         left.setVisibility(View.VISIBLE);
         right.setVisibility(View.VISIBLE);
 
-        left.setText("למפה");
-        left.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                goToMap();
-            }
-        });
+        leftToMap();
 
-        right.setText("איפוס");
+        right.setImageResource(R.drawable.return_button);
         right.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -145,63 +167,6 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
                 right.setVisibility(View.INVISIBLE);
             }
         });
-    }
-
-    private void secondClickOptions() { //Return to original state/move on. Give the user the choice if he wants to reset or carry on
-        right.setVisibility(View.VISIBLE);
-        left.setVisibility(View.VISIBLE);
-        try {
-        left.setText("למפה");
-        right.setText("איפוס");
-        left.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                goToMap();
-            }
-        });
-        right.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) { //Reset camera option when added
-                count=0;
-                left.setText("שמאל");
-                left.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        count++;
-                        if(count==1) {
-                            left.setVisibility(View.INVISIBLE);
-                            MainActivity.data.setLeftAngle(degrees);
-                            direction="left";
-                            takePicture();
-                        }else {
-                            secondClickOptions();
-                            MainActivity.data.setLeftAngle(degrees);
-                            direction="left";
-                            takePicture();
-                        }
-                    }
-                });
-                right.setText("ימין");
-                right.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        count++;
-                        if(count==1) { //Take picture, if pressed first
-                            right.setVisibility(View.INVISIBLE);
-                            MainActivity.data.setRightAngle(degrees);
-                            direction="right";
-                            takePicture();
-                        } else {
-                            secondClickOptions();
-                            MainActivity.data.setRightAngle(degrees);
-                            direction="right";
-                            takePicture();
-                        }
-                    }
-                });
-            }
-        });
-        }catch (Exception e){Toast.makeText(this,"נסה שנית",Toast.LENGTH_SHORT).show();}
     }
 
     private Camera.PictureCallback mPicture = new Camera.PictureCallback() {
@@ -229,6 +194,96 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
     public void onResume() {
         super.onResume();
         sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), SensorManager.SENSOR_DELAY_GAME);
+
+        if(MainActivity.fireType.equals(FireType.MOTION_RESUME)){
+
+            motionAngle = 0f;
+
+            left.setVisibility(View.INVISIBLE);
+            right.setVisibility(View.INVISIBLE);
+            target.setVisibility(View.VISIBLE);
+
+            //target.setText("תמרון");
+            target.setOnClickListener(motionAction());
+        }
+    }
+
+    public View.OnClickListener motionAction() {
+        return new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                motionAngle = degrees;
+
+                left.setVisibility(View.VISIBLE);
+                right.setVisibility(View.VISIBLE);
+                target.setVisibility(View.INVISIBLE);
+                left.setImageResource(R.drawable.ic_tomap);
+                right.setImageResource(R.drawable.return_button);
+
+                left.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        motionDialog = motionDialog();
+                        motionDialog.show();
+                    }
+                });
+                right.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        motionReset();
+                    }
+                });
+            }
+        };
+    }
+
+    private void motionReset() {
+        left.setVisibility(View.INVISIBLE);
+        right.setVisibility(View.INVISIBLE);
+        target.setVisibility(View.VISIBLE);
+
+        //target.setText("תמרון");
+        target.setOnClickListener(motionAction());
+    }
+
+    EditText countText, countLength;
+    private AlertDialog motionDialog(){
+        LinearLayout layout = motionDialogLayout();
+        return new AlertDialog.Builder(this).setTitle("הוסף הערות")
+                .setView(layout)
+                .setPositiveButton("אישור ולמפה", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        if(!countLength.getText().toString().equals("") && !countLength.getText().toString().equals("")){
+                            try {
+                                motionCount = Integer.parseInt(countText.getText().toString());
+                                motionLength = Double.parseDouble(countLength.getText().toString()) / 6371.0 * (180.0 / Math.PI);
+                                goToMap();
+                            }catch (Exception e){Toast.makeText(CameraActivity.this,"הזן כמות במספר שלם ומרחק במספר",Toast.LENGTH_SHORT).show();}
+                        }else
+                            Toast.makeText(CameraActivity.this,"הזן נתונים",Toast.LENGTH_SHORT).show();
+                    }
+                }).create();
+    }
+
+    /**
+     * Fills a LinearLayout with information for motionDialog
+     * @return linearLayout filled with views
+     */
+    private LinearLayout motionDialogLayout() {
+        LinearLayout layout = new LinearLayout(this); //Set up layout
+        layout.setOrientation(LinearLayout.VERTICAL);//In descending order
+        layout.setBackgroundColor(333333);
+        countText = new EditText(this);
+        countLength = new EditText(this);
+        TextView askLength = new TextView(this),askCount = new TextView(this);
+        askCount.setText("כמה פוליגונים"); //Text here with questions
+        askLength.setText("הגדר מסילת תנועה בקמ");
+        layout.addView(askLength);//Fill layout with four views
+        layout.addView(countLength);
+        layout.addView(askCount);
+        layout.addView(countText);
+        return layout; //Return filled container
     }
 
     @Override
@@ -253,7 +308,7 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
 
     // Check if this device has a camera
     private boolean checkCameraHardware(Context context) {
-        if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)){
+        if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)){
             // this device has a camera
             return true;
         } else {
