@@ -101,6 +101,10 @@ class ExcelGenerator {
         }
     }
 
+    /**
+     * Prints all the funnels in one excel file
+     * @param funnels
+     */
     ExcelGenerator(List<Funnel> funnels){
         directory = Environment.getExternalStorageDirectory().getAbsolutePath()+File.separator+MainActivity.name+File.separator+MainActivity.timestamp;
         file = new File(directory, "Data"+".xls");
@@ -131,7 +135,7 @@ class ExcelGenerator {
 
             firstRow.createCell((short) 1).setCellValue(toMercatorLat(funnel.points.get("FiringPoint").latitude));
             secondRow.createCell((short) 1).setCellValue(toMercatorLon(funnel.points.get("FiringPoint").longitude));
-            if(target){
+            if(target){//Checks if it needs target or left and right
                 firstRow.createCell((short) 2).setCellValue(toMercatorLat(funnel.points.get("Target").latitude));
                 secondRow.createCell((short) 2).setCellValue(toMercatorLon(funnel.points.get("Target").longitude));
                 firstRow.createCell((short) 3).setCellValue(funnel.getNote());
@@ -157,6 +161,10 @@ class ExcelGenerator {
 
     HSSFSheet sheets;
     int rowCounter;
+
+    /**
+     * Created for drill, adds each new funnel to the sheet
+     */
     public ExcelGenerator(){
         directory = Environment.getExternalStorageDirectory().getAbsolutePath()+File.separator+MainActivity.name+File.separator+MainActivity.timestamp;
         file = new File(directory, "Data"+".xls");
@@ -175,10 +183,10 @@ class ExcelGenerator {
         rowCounter = 1;
     }
 
-    public void addFunnel(String ammo, Funnel funnel){
+    public void addFunnel(Funnel funnel){
         HSSFRow firstRow = sheets.createRow(rowCounter),secondRow = sheets.createRow(rowCounter+1);
 
-        firstRow.createCell((short) 0).setCellValue(ammo);
+        firstRow.createCell((short) 0).setCellValue(MainActivity.data.getType());
         firstRow.createCell((short) 1).setCellValue(toMercatorLat(funnel.firingPoint.latitude));
         secondRow.createCell((short) 1).setCellValue(toMercatorLon(funnel.firingPoint.longitude));
         firstRow.createCell((short) 2).setCellValue(toMercatorLat(funnel.getCertainPoint("Left").latitude));
@@ -201,6 +209,9 @@ class ExcelGenerator {
         }
     }
 
+    /**
+     * Changes the lat and lon to Mercator coordinates
+     */
     private double toMercatorLon(double lon)
     {
         return lon * 20037508.34 / 180;

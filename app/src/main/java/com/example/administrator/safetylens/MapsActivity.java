@@ -1,15 +1,19 @@
 package com.example.administrator.safetylens;
 
+import android.Manifest;
 import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.DividerItemDecoration;
@@ -17,12 +21,14 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -41,47 +47,52 @@ import com.google.maps.android.data.kml.KmlPlacemark;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import static com.example.administrator.safetylens.MainActivity.ammos;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
-    Map<String,CustomPolygon> map;
+    //Map<String,CustomPolygon> map;
     CustomPolygon currentPolygon;
-    Button finish, show, notes;
+    ImageButton finish, show, notes, add;
     static List<PolylineOptions[]> polylineOptionsList = new ArrayList<>();
     static final List<String> timestamps = new ArrayList<>();
     static List<Boolean> booleanList = new ArrayList<>();
     List<Funnel> funnelList = new ArrayList<>();
     RecyclerView recyclerView;
     PolygonOptionsListAdapter polygonOptionsListAdapter;
-    private AlertDialog alertDialog,noteDialog;
     Funnel funnel;
-    TextView statusBar;
+    ImageView statusBar;
     static float originalLeft,originalRight;
     static LatLng originalFiringPoint, target;
     Funnel drillFunnel;
     AmmoList ammoList;
     Spinner spinnerAmmo;
-    ExcelGenerator generator;
+    static ExcelGenerator generator;
     CustomPolygonList customPolygonList;
     String key;
 
+    /**
+     * When created, sets the UI, asks for permission
+     * @param savedInstanceState
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         // Hiding the title bar has to happen before the view is created
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        setContentView(R.layout.activity_maps);
+        setContentView(R.layout.map_page);
+        //Ask for permission to access files, gps
+        requestPermission(Manifest.permission.ACCESS_FINE_LOCATION);
+        requestPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        requestPermission(Manifest.permission.READ_EXTERNAL_STORAGE);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        statusBar = findViewById(R.id.statusBar);
-        statusBar.setBackgroundColor(Color.TRANSPARENT);
+        statusBar = findViewById(R.id.status);
         statusBar.bringToFront();
 
         recyclerView = new RecyclerView(this);
@@ -120,36 +131,60 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onClick(View v) {
                 if(isDrillResume()){
                     funnelList.add(drillFunnel);
-                    generator.addFunnel(MainActivity.data.type,drillFunnel);
+                    generator.addFunnel(drillFunnel);
                     generator.printFile();
                 }
                 else
                     printInfo();
+                goToMain();
             }
         });
 
         notes = findViewById(R.id.notes);
-        noteDialog = noteDialog();
         notes.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                noteDialog.show();
+                noteDialog().show();
             }
         });
 
         show = findViewById(R.id.show);
-        alertDialog = alertDialog();
         show.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                alertDialog.show();
+                try {
+                    alertDialog().show();
+                }catch (IllegalStateException e){e.printStackTrace();}
             }
         });
 
-        ammoList = new AmmoList(this,android.R.layout.simple_spinner_item,ammos);
-        spinnerAmmo = new Spinner(this);
-        spinnerAmmo.setAdapter(ammoList);
-        spinnerAmmo.setOnItemSelectedListener(ammoList.onItemClicker);
+        add = findViewById(R.id.add);
+        add.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                {
+                     if(!isDrillResume()) {
+                         polylineOptionsList.add(funnel.getLines());
+                         timestamps.add(funnel.timestamp);
+                         booleanList.add(true);
+                         polygonOptionsListAdapter.notifyDataSetChanged();
+                         funnelList.add(funnel);
+                         if(MainActivity.fireType.equals(FireType.DRILL)){
+                             generator = new ExcelGenerator();
+                             generator.addFunnel(funnel);
+                             MainActivity.fireType = FireType.DRILL_RESUME;
+                         }
+                         if(MainActivity.fireType.equals(FireType.MOTION))
+                             MainActivity.fireType = FireType.MOTION_RESUME;
+                         goToCamera();
+                     }
+                     else {
+                         drillDialog().show();
+                     }
+                }
+            }
+        });
+
     }
 
     @Override
@@ -159,13 +194,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if(MainActivity.fireType.equals(FireType.MOTION_RESUME)) statusBar.setVisibility(View.INVISIBLE);
     }
 
+    /**
+     * Sets alert dialog for to display the list of funnels
+     * @return
+     */
     private AlertDialog alertDialog() {
-       return new AlertDialog.Builder(this).setTitle("רשימת פוליגונים").setNegativeButton("הסר הכל", new DialogInterface.OnClickListener() {
+        if(recyclerView.getParent() != null) {
+            ((ViewGroup)recyclerView.getParent()).removeView(recyclerView);
+        }
+       return new AlertDialog.Builder(this).setTitle("רשימת פוליגונים")
+               .setNegativeButton("הסר הכל", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 mMap.clear();
-                for(String key:map.keySet())
-                    mMap.addPolygon(map.get(key).getPolygon());
+                for(String key:customPolygonList.getMap().keySet())
+                    mMap.addPolygon(customPolygonList.getMap().get(key).getPolygon());
                 for (int i = 0; i < booleanList.size(); i++)
                     booleanList.set(i, false);
             }
@@ -173,8 +216,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 mMap.clear();
-                for(String key:map.keySet())
-                    mMap.addPolygon(map.get(key).getPolygon());
+                for(String key:customPolygonList.getMap().keySet())
+                    mMap.addPolygon(customPolygonList.getMap().get(key).getPolygon());
                 polylineOptionsList.clear();
                 timestamps.clear();
                 polygonOptionsListAdapter.notifyDataSetChanged();
@@ -187,34 +230,45 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     for (PolylineOptions option : options)
                         mMap.addPolyline(option);
             }
-        }).setView(recyclerView).create();
+        }).setView(recyclerView).create();//.setView(LayoutInflater.from(this).inflate(R.layout.alert_recycle, null, false))
     }
 
     EditText noteText;
-
+    /**
+     *Sets the alert dialog to display and edit the notes
+     */
     private AlertDialog noteDialog(){
         noteText = new EditText(this);
-        noteText.setText(MainActivity.data.notes);
+        if(!isDrillResume())
+            noteText.setText(funnel.note);
+        else
+            noteText.setText(drillFunnel.note);
         return new AlertDialog.Builder(this).setTitle("הוסף הערות")
                 .setView(noteText)
                 .setPositiveButton("אישור", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                       funnel.setNotes(noteText.getText().toString());
+                        if(!isDrillResume())
+                            funnel.setNotes(noteText.getText().toString());
+                        else
+                            drillFunnel.setNotes(noteText.getText().toString());
                     }
                 }).create();
     }
 
+    /**
+     * Sets the alert dialog for drill, there are options to save it to the drill
+     */
     private AlertDialog drillDialog(){
         return new AlertDialog.Builder(this).setTitle("לשמור פוליגון לתרגיל? ניתן גם לשנות סוג תחמושת")
-                .setView(spinnerAmmo)
+                .setView(drillDialogLayout())
                 .setPositiveButton("שמור לתרגיל", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         drillFunnel.setColorsToSaveInDrill();
                         polylineOptionsList.add(drillFunnel.getLines());
                         funnelList.add(drillFunnel);
-                        generator.addFunnel(MainActivity.data.type,drillFunnel);
+                        generator.addFunnel(drillFunnel);
                         goToCamera();
                     }
                 }).setNeutralButton("חזרה למפה",null)
@@ -226,6 +280,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }).create();
     }
 
+    /**
+     * Creates the layout for the drill alert dialog
+     * @return
+     */
+    private LinearLayout drillDialogLayout() {
+        ammoList = new AmmoList(this,android.R.layout.simple_spinner_item,ammos);
+        spinnerAmmo = new Spinner(this);
+        spinnerAmmo.setAdapter(ammoList);
+        spinnerAmmo.setOnItemSelectedListener(ammoList.onItemClicker);
+        LinearLayout layout = new LinearLayout(this); //Set up layout
+        layout.setOrientation(LinearLayout.VERTICAL);//In descending order
+        layout.addView(spinnerAmmo) ;
+        return layout;
+    }
+
     private void openFile(int position){
         File file = new File(Environment.getExternalStorageDirectory().getAbsolutePath()+File.separator+MainActivity.name+File.separator+timestamps.get(position)+"Data.xls");
         Uri path = Uri.fromFile(file);
@@ -234,8 +303,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         openintent.setDataAndType(path, "application/vnd.ms-excel");
         try {
             startActivity(openintent);
-        }
-        catch (ActivityNotFoundException e) {
+        }catch (ActivityNotFoundException e) {
             e.printStackTrace();
         }
     }
@@ -276,7 +344,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Create new Funnel to display the Polygon
         try {//Won't work on first instance, will succeed afterwards
-            if(!MainActivity.fireType.equals(FireType.NONE)) {
+            if(!isDrillResume()) {
                 try {
                     addNewFunnel();
                 } catch (Exception e) {
@@ -288,7 +356,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         mMap.setOnMyLocationClickListener(new GoogleMap.OnMyLocationClickListener(){
             @Override
-            public void onMyLocationClick(@NonNull Location location) {
+            public void onMyLocationClick(@NonNull Location location) {//If is target, motion or motion resume, and the current location is clicked, it will add a polygon facing towards the target
                 if(MainActivity.targetVisible) {
                     Location targetLocation = new Location("");
                     targetLocation.setLongitude(target.longitude);
@@ -298,7 +366,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        if(MainActivity.fireType.equals(FireType.DRILL)){
+        if(MainActivity.fireType.equals(FireType.DRILL)){//If the fire type is drill, sets the original angles and the original fire point
             originalLeft = MainActivity.data.leftAngle;
             originalRight = MainActivity.data.rightAngle;
             originalFiringPoint = MainActivity.gps.getLatLng();
@@ -309,13 +377,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 for (PolylineOptions option : options)
                     mMap.addPolyline(option);
             drillFunnel = new Funnel(originalFiringPoint);
-            //drillFunnel.setColorToNew();
+            drillFunnel.setColorToNew();
             for(PolylineOptions options:drillFunnel.getLines())
                 mMap.addPolyline(options);
         }
 
         //In the event it is not a single fire(Motion or Drill), all will be displayed regardless
-        //Therefore, no need for show, but rather to start next stage
+        /*Therefore, no need for show, but rather to start next stage
         if(MainActivity.fireType.equals(FireType.DRILL) || MainActivity.fireType.equals(FireType.DRILL_RESUME)){
             show.setText("הוסף");
             show.setOnClickListener(new View.OnClickListener() {
@@ -346,12 +414,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     goToCamera();
                 }
             });
-        }
+        }*/
 
          if(MainActivity.fireType.equals(FireType.MOTION_RESUME))
              addMotionPolyline();
     }
 
+    //Add new funnel to the map
     private void addNewFunnel() {
         if(isDrillResume()) funnel = new Funnel(originalFiringPoint);
         else //if (Motion Resume))
@@ -363,12 +432,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mMap.addPolyline(options);
         addDangerCircle();
         if(currentPolygon == null){
+            statusBar.setVisibility(View.VISIBLE);
             funnel.status = Funnel.Status.RED;
-            statusBar.setBackgroundColor(Color.RED);
+            statusBar.setBackgroundResource(R.drawable.ic_redstatus);
             return;
         }
         checkFunnelStatus(funnel.getPoints(),funnel);
-        //setStatusImage(funnel);
+        setStatusImage(funnel);
+        /*
         if(funnel.status == Funnel.Status.GREEN)
             statusBar.setBackgroundColor(Color.GREEN);
         else if (funnel.status == Funnel.Status.YELLOW)
@@ -377,6 +448,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             statusBar.setBackgroundColor(Color.RED);
         if (!funnel.status.equals(Funnel.Status.RED))
             funnelList.add(funnel);
+         */
     }
 
     /**
@@ -387,6 +459,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mMap.addCircle(new CircleOptions().center(funnel.getTarget()).radius(300).fillColor(Color.MAGENTA));
     }
 
+    //Check funnel's status
     private void checkFunnelStatus(LatLng[] points, Funnel funnel) {
         if(currentPolygon == null){
             funnel.status = Funnel.Status.RED;
@@ -397,9 +470,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         for(LatLng ll : points)
             if(!currentPolygon.isIn(ll)){ //No status change
                 //(Green) if doesn't go in,
-                for(String key:map.keySet()){
+                for(String key:customPolygonList.getMap().keySet()){
                     if(!key.equals(MainActivity.key)){
-                        if(map.get(key).isIn(ll)){
+                        if(customPolygonList.getMap().get(key).isIn(ll)){
                             funnel.setStatus(Funnel.Status.YELLOW);
                             break;
                         }else
@@ -423,6 +496,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return MainActivity.fireType.equals(FireType.DRILL_RESUME);
     }
 
+    /**
+     * On return from the camera activity in motion resume adds all the new funnels
+     */
     private void addMotionPolyline() {
         PolygonOptions motionLine = new PolygonOptions();
         motionLine.add(MainActivity.gps.getLatLng()).add(fullRangePoint(MainActivity.gps.getLatLng(),CameraActivity.motionLength,CameraActivity.motionAngle)).fillColor(Color.DKGRAY);
@@ -431,15 +507,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         for(int i=1; i<=CameraActivity.motionCount; i++){
             LatLng newFiringPoint = fullRangePoint(MainActivity.gps.getLatLng(),(double)i*CameraActivity.motionLength/CameraActivity.motionCount,CameraActivity.motionAngle);
             Funnel motionFunnel = new Funnel(newFiringPoint,MapsActivity.target);
-            motionFunnel.setStatus(currentPolygon,map);
-            if(!motionFunnel.status.equals(Funnel.Status.RED)){
-                funnelList.add(motionFunnel);
-                for(PolylineOptions options:motionFunnel.lines.values())
-                    mMap.addPolyline(options);
-                timestamps.add(motionFunnel.timestamp);
-                booleanList.add(true);
-                polygonOptionsListAdapter.notifyDataSetChanged();
-            }
+            if(currentPolygon!=null)
+                motionFunnel.setStatus(currentPolygon,customPolygonList.getMap());
+            funnelList.add(motionFunnel);
+            for(PolylineOptions options:motionFunnel.lines.values())
+                mMap.addPolyline(options);
+            timestamps.add(motionFunnel.timestamp);
+            booleanList.add(true);
+            polygonOptionsListAdapter.notifyDataSetChanged();
         }
     }
 
@@ -484,6 +559,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
     }
 
+    //Prints the info to the excel file
     public void printInfo() {
         MainActivity.setFileName();
         File file = new File(Environment.getExternalStorageDirectory().getAbsolutePath()+File.separator+MainActivity.name+File.separator+MainActivity.timestamp);
@@ -502,19 +578,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         /*Add all polylineOptions to list to save
           These can then be called on pop-up alert and be placed or removed from map.
           of course, it will only be saved if the user presses add in activity*/
-        if(!(MainActivity.fireType.equals(FireType.DRILL_RESUME) || MainActivity.fireType.equals(FireType.DRILL) || MainActivity.fireType.equals(FireType.MOTION) || MainActivity.fireType.equals(FireType.MOTION_RESUME))) {
-            //TODO: When UI is redrawn, and plus button is selected, change these lines to the plus button
-            polylineOptionsList.add(funnel.getLines());
-            timestamps.add(funnel.timestamp);
-            booleanList.add(true);
-            polygonOptionsListAdapter.notifyDataSetChanged();
-            /*
-            if(!isDrillResume())
-                goToCamera();
-            else
-                drillDialog().show();
-             */
-        }
     }
 
     /**
@@ -556,30 +619,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return new LatLng(lat,lon);
     }
 
+    /**
+     * Adds the firing area to the map
+     */
     public void addFiringAreas(){
-        customPolygonList = new CustomPolygonList();
+        customPolygonList = new CustomPolygonList(); //Sets the list
         try {
-            KmlLayer layer = new KmlLayer(mMap, R.raw.firing_areas, this);
-            layer.addLayerToMap();
-            for(KmlContainer container:layer.getContainers())
-                for(KmlContainer nestedContainer : container.getContainers()){
-                    if(nestedContainer.hasPlacemarks())
-                        for(KmlPlacemark placemark:nestedContainer.getPlacemarks()){
+            KmlLayer layer = new KmlLayer(mMap, R.raw.firing_areas, this); //Creates KML layer to open file
+            layer.addLayerToMap(); //Adds KML layer to map
+            for(KmlContainer container:layer.getContainers()) //Opens file
+                for(KmlContainer nestedContainer : container.getContainers()){ //Opens containers in file
+                    if(nestedContainer.hasPlacemarks()) //Checks if the file has "Placemarks"
+                        for(KmlPlacemark placemark:nestedContainer.getPlacemarks()){//Adds all the placemarks to the custompolygonlist
                             try {
                                 //mMap.addPolygon(new PolygonOptions().addAll((ArrayList<LatLng>) placemark.getGeometry().getGeometryObject()).fillColor(Color.BLUE).strokeColor(Color.BLACK));
                                 customPolygonList.addCustomPolygon(placemark.getProperty("name"),(ArrayList<LatLng>) placemark.getGeometry().getGeometryObject());
                             }catch (Exception e){e.printStackTrace();}
                         }
                 }
-            layer.removeLayerFromMap();
+            layer.removeLayerFromMap(); //Remove KML layer
         } catch (Exception e) {
             e.printStackTrace();
         }
 
+        //Adds all the object to the map
         for(CustomPolygon polygon:customPolygonList.getMap().values())
             mMap.addPolygon(polygon.getPolygon());
     }
 
+    /*
+    Finds current polygon based upon GPS
+     */
     public CustomPolygon findCurrentPolygon(){
         CustomPolygon findPolygon = null;
         try{
@@ -594,14 +664,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return findPolygon;
     }
 
+    /**
+     * Sets the image based upon status
+     */
     public void setStatusImage(Funnel fun){
-        //statusView.setVisibility(View.Visible);
+        if(MainActivity.fireType.equals(FireType.MOTION_RESUME))return;
+        statusBar.setVisibility(View.VISIBLE);
         if(fun.status.equals(Funnel.Status.GREEN))
-            ;//statusView.setimage(R.drawable.ic_greenstatus);
+            statusBar.setBackgroundResource(R.drawable.ic_greenstatus);
         else if (fun.status.equals(Funnel.Status.YELLOW))
-            ;//statusView.setimage(R.drawable.ic_yellowstatus);
+            statusBar.setBackgroundResource(R.drawable.ic_yellowstatus);
         else
-            ;//statusView.setimage(R.drawable.ic_redstatus);
+            statusBar.setBackgroundResource(R.drawable.ic_redstatus);
+    }
+
+    //Asks user for permission
+    //Being storage manipulation, gps, camera,  ect...
+    private void requestPermission(String permission) {
+        if (ContextCompat.checkSelfPermission(this.getApplicationContext(), permission) != PackageManager.PERMISSION_GRANTED)
+            ActivityCompat.requestPermissions(this, new String[]{permission}, 101);
     }
 
     /*

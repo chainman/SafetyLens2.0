@@ -1,5 +1,6 @@
 package com.example.administrator.safetylens;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -13,6 +14,8 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -43,15 +46,22 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
     TextView angle;
     AlertDialog motionDialog;
 
+    /**
+     * Called on creation, set the sensor activity to detect the angle
+     * @param savedInstanceState
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getSupportActionBar().hide();
+        getSupportActionBar().hide(); //Hides the top bar to better display the design
         setContentView(R.layout.camera_page);
+
+        requestPermission(Manifest.permission.CAMERA); //In case the camera permission wasn't requested, will be asked again
+
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         frameLayout = findViewById(R.id.cameraLayout1);
-        angle = findViewById(R.id.direction1);
-        try {
+        angle = findViewById(R.id.direction1); //TextView showing current angle
+        try {//Sets the right button to set the right angle
             right = findViewById(R.id.buttonRight1);
             right.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -63,7 +73,7 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
                     rightToReset();
                 }
             });
-            left = findViewById(R.id.buttonLeft1);
+            left = findViewById(R.id.buttonLeft1); //Sets the left button to set the left angle
             left.setImageResource(R.drawable.left);
             left.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -76,7 +86,7 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
             });
         }catch (Exception e){Toast.makeText(this,"נסה שנית", Toast.LENGTH_SHORT).show();}
 
-        target = findViewById(R.id.buttonTarget1);
+        target = findViewById(R.id.buttonTarget1); //Target button, called during motion or area
         target.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -87,11 +97,13 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
             }
         });
 
+        //Brings the buttons in front of the camera
         right.bringToFront();
         left.bringToFront();
         target.bringToFront();
 
-        if(MainActivity.fireType == FireType.TARGET || MainActivity.fireType == FireType.MOTION) {
+        //Shows either target button or left/right buttons
+        if(MainActivity.targetVisible) {
             target.setVisibility(View.VISIBLE);
             right.setVisibility(View.INVISIBLE);
             left.setVisibility(View.INVISIBLE);
@@ -106,6 +118,9 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
         frameLayout.addView(new CameraPreview(this,camera));
     }
 
+    /*
+      Right button will also serve as a reset after parameters are selected. Also set the option for the left button to save left angle
+     */
     public void rightToReset(){
         right.setImageResource(R.drawable.return_button);
         right.setOnClickListener(new View.OnClickListener() {
@@ -139,6 +154,7 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
         });
     }
 
+    //After left is selected, sets the left button to take to maps activity, reset on right will still be active
     public void leftToMap(){
         left.setImageResource(R.drawable.ic_tomap);
         left.setOnClickListener(new View.OnClickListener() {
@@ -169,6 +185,7 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
         });
     }
 
+    //Takes picture
     private Camera.PictureCallback mPicture = new Camera.PictureCallback() {
         @Override
         public void onPictureTaken(byte[] data, Camera camera) {
@@ -190,24 +207,27 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
             camera.takePicture(null,null,mPicture);
     }
 
+    //Changes UI if is a motion resume
     @Override
     public void onResume() {
         super.onResume();
         sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), SensorManager.SENSOR_DELAY_GAME);
 
-        if(MainActivity.fireType.equals(FireType.MOTION_RESUME)){
+        if(MainActivity.fireType != null)
+            if(MainActivity.fireType.equals(FireType.MOTION_RESUME)){
 
-            motionAngle = 0f;
+              motionAngle = 0f;
 
-            left.setVisibility(View.INVISIBLE);
-            right.setVisibility(View.INVISIBLE);
-            target.setVisibility(View.VISIBLE);
+              left.setVisibility(View.INVISIBLE);
+              right.setVisibility(View.INVISIBLE);
+              target.setVisibility(View.VISIBLE);
 
             //target.setText("תמרון");
-            target.setOnClickListener(motionAction());
-        }
+             target.setOnClickListener(motionAction());
+         }
     }
 
+    //Changes function of UI if is Motion Resume
     public View.OnClickListener motionAction() {
         return new View.OnClickListener() {
             @Override
@@ -246,11 +266,11 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
         target.setOnClickListener(motionAction());
     }
 
+    //Alert dialog for motion resume, sets the number of of polygons and how long to go
     EditText countText, countLength;
     private AlertDialog motionDialog(){
-        LinearLayout layout = motionDialogLayout();
         return new AlertDialog.Builder(this).setTitle("הוסף הערות")
-                .setView(layout)
+                .setView(motionDialogLayout())
                 .setPositiveButton("אישור ולמפה", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
@@ -273,7 +293,6 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
     private LinearLayout motionDialogLayout() {
         LinearLayout layout = new LinearLayout(this); //Set up layout
         layout.setOrientation(LinearLayout.VERTICAL);//In descending order
-        layout.setBackgroundColor(333333);
         countText = new EditText(this);
         countLength = new EditText(this);
         TextView askLength = new TextView(this),askCount = new TextView(this);
@@ -386,6 +405,13 @@ public class CameraActivity extends AppCompatActivity implements SensorEventList
                 Log.d("", "Error starting camera preview: " + e.getMessage());
             }
         }
+    }
+
+    //Asks user for permission
+    //Being storage manipulation, gps, camera,  ect...
+    private void requestPermission(String permission) {
+        if (ContextCompat.checkSelfPermission(this.getApplicationContext(), permission) != PackageManager.PERMISSION_GRANTED)
+            ActivityCompat.requestPermissions(this, new String[]{permission}, 101);
     }
 
 }

@@ -25,18 +25,23 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+/**
+ * Main activity for tha application, here the user will select the title for the excel file, ammo and fire type.
+ * Will also check if GPS is active
+ */
+
 public class MainActivity extends AppCompatActivity {
 
-    static boolean dangerCircleNeeded;
+    static boolean dangerCircleNeeded;//Based upon ammo, a circle might need to be added based upon type of ammo
     static Gps gps;
-    static Data data;
-    Spinner spinnerArea,spinnerAmmo,spinnerFiringType;
+    static Data data; //Stores data for application
+    Spinner spinnerArea,spinnerAmmo,spinnerFiringType; //Spinners for the dropdowns
     String[] keys;
     static String[] ammos; //List of ammo names,to be filled in manually here
     static String key;
     CustomPolygonList customPolygonList;
     AmmoList ammoList;
-    static double height;
+    static double height; // Distance for ammo
     Button start, automate;
     static String timestamp,folderDirectory,name = "Safety";
     static FireType fireType;
@@ -47,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getSupportActionBar().hide();
+        getSupportActionBar().hide(); //Hides toolbar to not interfere with the UI
         setContentView(R.layout.home_page);
 
         //Ask for permission to access files, gps and camera
@@ -66,37 +71,40 @@ public class MainActivity extends AppCompatActivity {
         start.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(data.type != null) {
-                    if (targetVisible)
-                        try {
-                            targetDistance = (Double.parseDouble(targetText.getText().toString())) / 6371.0 * (180.0 / Math.PI);
-                            if (targetDistance > height)
-                                Toast.makeText(MainActivity.this, "הזן מרחק קטן יותר", Toast.LENGTH_SHORT).show();
-                            else {
-                                if(nameText.getText()!=null)
-                                    timestamp = nameText.getText().toString();
-                                goToCamera();
+                if (gps.getLatLng()!=null){
+                    if(data.type != null) {
+                        if (targetVisible)
+                            try {
+                                targetDistance = (Double.parseDouble(targetText.getText().toString())) / 6371.0 * (180.0 / Math.PI);
+                                if (targetDistance > height)
+                                    Toast.makeText(MainActivity.this, "הזן מרחק קטן יותר", Toast.LENGTH_SHORT).show();
+                                else {
+                                    if(nameText.getText()!=null)
+                                        timestamp = nameText.getText().toString();
+                                    goToCamera();
+                                }
+                            } catch (Exception e) {
+                                Toast.makeText(MainActivity.this, "הזן מטרה", Toast.LENGTH_SHORT).show();
                             }
-                        } catch (Exception e) {
-                            Toast.makeText(MainActivity.this, "הזן מטרה", Toast.LENGTH_SHORT).show();
+                        else if(fireType != null){
+                            if(nameText.getText()!=null)
+                                timestamp = nameText.getText().toString();
+                            goToCamera();
                         }
-                    else if(!fireType.equals(FireType.NONE)){
-                        if(nameText.getText()!=null)
-                            timestamp = nameText.getText().toString();
-                        goToCamera();
+                        else
+                            Toast.makeText(MainActivity.this,"בחר סוג ירי",Toast.LENGTH_SHORT).show();
                     }
                     else
-                        Toast.makeText(MainActivity.this,"בחר סוג ירי",Toast.LENGTH_SHORT).show();
-                }
-                else
-                    Toast.makeText(MainActivity.this,"בחר סוג תחמושת",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this,"בחר סוג תחמושת",Toast.LENGTH_SHORT).show();
+                }else{Toast.makeText(MainActivity.this,"מיקום לא נמצא",Toast.LENGTH_SHORT).show();}
             }
         });
+        //Only becomes visible upon motion or area
         targetText.setVisibility(View.INVISIBLE);
         findViewById(R.id.targetDistance).setVisibility(View.INVISIBLE);
         //Create list of custom polygons, and store keys
-        customPolygonList = new CustomPolygonList();
-        keys = customPolygonList.getMap().keySet().toArray(new String[customPolygonList.getMap().keySet().size()]);
+        //customPolygonList = new CustomPolygonList();
+        //keys = customPolygonList.getMap().keySet().toArray(new String[customPolygonList.getMap().keySet().size()]);
 
         timestamp = "";
         nameText = findViewById(R.id.place);
@@ -194,6 +202,7 @@ public class MainActivity extends AppCompatActivity {
             file.mkdir();
     }
 
+    //Resets the file name and the fire type if is a resume
     @Override
     protected void onResume() {
         super.onResume();
@@ -215,7 +224,6 @@ public class MainActivity extends AppCompatActivity {
         data.setRightAngle(0f);
         data.setLeftAngle(0f);
         data.setTargetAngle(0f);
-        fireType = FireType.NONE;
     }
 
     //Asks user for permission
@@ -267,4 +275,12 @@ public class MainActivity extends AppCompatActivity {
 
 }
 
-enum FireType {TARGET,AREA,DRILL,MOTION,DRILL_RESUME,MOTION_RESUME,NONE}
+/**
+ * Types of user inputted firing types:
+ * Target - User will select left and right angles, then funnel will be build around those parameters.
+ * Area - User will select target and distance to target, then funnel will be build around those parameters.
+ * Drill - User will build a Target funnel, then will be able to fire from same location only with different ammo.
+ * Motion - User will build a Area funnel, then will be able to add lines of motion with multiple funnels pointing towards the selected target.
+ * Resumes - Same as the original, used to change UI accordingly.
+ */
+enum FireType {TARGET,AREA,DRILL,MOTION,DRILL_RESUME,MOTION_RESUME}

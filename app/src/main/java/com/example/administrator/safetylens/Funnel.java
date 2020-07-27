@@ -22,25 +22,28 @@ import java.util.Map;
 import static com.example.administrator.safetylens.MapUtils.MathUtil.SphericalUtil.computeDistanceBetween;
 
 /**
- * Due to a need for a more dynamic funnels, this will be objected
+ * Funnel class, the shapes added to the maps displaying the users output
+ *
+ *   LeftCurve  Curve     Right Curve
+ *    ----**************-----
+ *     -   *          *    -
+ *       -  *        *   -
+ *         -  *     *   -
+ *           - *   *  -
+ *    left      -*-     Right
+ *              Firing point
  */
 
 public class Funnel{
 
     LatLng firingPoint;//Bases for funnel
     Float leftAngle,rightAngle; //Angles, will be imported from Main
-    //LatLng left,right,leftClose,rightClose;// Focal points of funnel
-    //LatLng farthest, target; //Farthest and target point of funnel
-    //PolylineOptions leftShort,rightShort,curve,leftOffset,rightOffset,rightArc,leftArc,leftLong,rightLong;
     Status status;
     String timestamp;
-    //GoogleMap mMap;
-    //Map<String,CustomPolygon> polygonList;
-    //CustomPolygon currentPolygon;
-    Map<String,LatLng> points;
-    Map<String, PolylineOptions> lines;
+    Map<String,LatLng> points; //All the points in the funnel
+    Map<String, PolylineOptions> lines; //All the lines in the funnel
     float angleTarget = 60;
-    List<PatternItem> pattern = Arrays.asList(new Dash(30), new Gap(20));
+    List<PatternItem> pattern = Arrays.asList(new Dash(30), new Gap(20)); //Dotted lines for offsets
     String note = " ";
     int drillPolygonCounter;
 
@@ -91,10 +94,10 @@ public class Funnel{
      * @param step
      */
     private void addTargetPolygon(float step) {
-        float angle = MainActivity.data.getTargetAngle();
+        float angle = MainActivity.data.getTargetAngle();//Gets angle for target
 
         points.put("Target",fullRangePoint(getFiringPoint(),MainActivity.targetDistance,angle));
-        MapsActivity.target = fullRangePoint(getFiringPoint(),MainActivity.targetDistance,angle);
+        MapsActivity.target = fullRangePoint(getFiringPoint(),MainActivity.targetDistance,angle); //Sets target for clicking polygons
 
         points.put("LeftShort",fullRangePoint(getFiringPoint(),(0.5/6371.0)*(180.0/Math.PI),plus(angle,-30)));
         points.put("RightShort",fullRangePoint(getFiringPoint(),(0.5/6371.0)*(180.0/Math.PI),plus(angle,30)));
@@ -131,6 +134,10 @@ public class Funnel{
         }
     }
 
+    /**
+     * Creates a Polygon based upon the targeting option
+     * @param step
+     */
     public void addMotionPolygon(float step, float angle, LatLng firingPoint){
         points.put("Target",MapsActivity.target);
         points.put("LeftShort",fullRangePoint(firingPoint,(0.5/6371.0)*(180.0/Math.PI),plus(angle,-30)));
@@ -194,6 +201,12 @@ public class Funnel{
         this.status = status;
     }
 
+    /**
+     * Sets status for this funnel:
+     * Green - All in
+     * Yellow - Some points in other custom polygon
+     * Red - Some points outside custom polygon
+     */
     public void setStatus(CustomPolygon currentPolygon,Map<String,CustomPolygon> map){
         setStatus(Funnel.Status.GREEN);
         //LatLng[] points = funnel.getPoints();
@@ -355,6 +368,7 @@ public class Funnel{
         return options;
     }
 
+    //Returns list of points on curve
     public List<Float> points(float p1, float p2, float num, boolean f){
         List<Float> list = new ArrayList<>();
         float distance = Math.abs(p1-p2);
@@ -527,6 +541,7 @@ public class Funnel{
         return new LatLng(x,y);
     }
 
+    //Returns bearing towards other location
     private float bearing(LatLng location, LatLng target){
         //return (float) Math.atan2(-(location.latitude-target.latitude),(location.longitude-target.longitude));
         Location l1 = new Location(""),l2 = new Location("");
@@ -575,6 +590,9 @@ public class Funnel{
             line.color(0x500ff0ff);
     }
 
+    /**
+     * Types of statuses, see setStatus for breakdown
+     */
     enum Status {GREEN,YELLOW,RED}
 
 }

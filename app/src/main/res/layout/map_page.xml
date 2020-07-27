@@ -20,6 +20,7 @@
 
 
     <ImageView
+        android:id="@+id/status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
@@ -27,18 +28,23 @@
         map:layout_constraintLeft_toLeftOf="parent"
         map:layout_constraintRight_toRightOf="parent"
         map:layout_constraintTop_toTopOf="parent"
-        android:visibility="visible"/>
+        android:visibility="invisible"/>
 
 
     <ImageView
-        android:layout_width="413dp"
+        android:id="@+id/blackBar"
+        android:layout_width="match_parent"
         android:layout_height="150dp"
         android:background="@drawable/ic_map_background"
         map:layout_constraintBottom_toBottomOf="parent"
+        map:layout_constraintEnd_toEndOf="parent"
+        map:layout_constraintHorizontal_bias="0.0"
         map:layout_constraintLeft_toLeftOf="parent"
-        map:layout_constraintRight_toRightOf="parent" />
+        map:layout_constraintRight_toRightOf="parent"
+        map:layout_constraintStart_toStartOf="parent" />
 
     <ImageButton
+        android:id="@+id/show"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="144dp"
@@ -59,7 +65,7 @@
         map:layout_constraintStart_toStartOf="parent" />
 
     <ImageButton
-        android:id="@+id/show"
+        android:id="@+id/add"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"

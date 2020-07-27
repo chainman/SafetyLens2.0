@@ -17,6 +17,12 @@ public class AmmoList extends ArrayAdapter<String>{
     private double[] distance;//Corresponding to ammos, every index has to be the same, basically avoiding complex try/catch. Distance the ammo can travel
     private boolean[] dangerCircle; //If needs radius of 300m around it
 
+    /**
+     * Creates a new AmmoList
+     * @param context
+     * @param resource
+     * @param array
+     */
     AmmoList(Context context, int resource, String[] array) {
         super(context, resource,array);
         ammos = array;
@@ -46,6 +52,7 @@ public class AmmoList extends ArrayAdapter<String>{
     {return i;}
 
 
+    //Shifts the key to based upon the clicked item
     AdapterView.OnItemSelectedListener onItemClicker = new AdapterView.OnItemSelectedListener() {
         @Override
         public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {

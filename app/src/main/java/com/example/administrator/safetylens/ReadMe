@@ -1,0 +1,10 @@
+This is the ReamMe file for the Safety Lens project
+
+There are a few data types that can potentially be requested to change: Ammo, Maps, or Polygons.
+
+Ammo can be accessed both in the MainActivity under the String List called "Ammo", in the AmmoList there is a List of Doubles that contains the length it flies and a List of Booleans that denotes if a circle is needed (Check the accompanying plastic diagrams)
+
+Maps are from an external source, they are located at R.raw.firing_areas.kml. If the parsing needs to be changes, make sure to do a double loop on the containers (See MapsActivity ~line 600).
+
+Polygons are based upon the plastic sheets. Check the Funnel for calculations.
+

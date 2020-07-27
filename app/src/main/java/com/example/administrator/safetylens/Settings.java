@@ -11,8 +11,7 @@ import android.widget.Switch;
 
 public class Settings extends AppCompatActivity {
 
-    static boolean pictures = false,status = true; //Pictures if want to save photos and roads if want to show roads options and status to allow to save when red
-    //FIXME: Turn pictures to true when done testing
+    static boolean pictures = true,status = true; //Pictures if want to save photos and roads if want to show roads options and status to allow to save when red
     static long seconds = 5; //Time to reveal photo options
     Switch picture,road,state;
     EditText editText;

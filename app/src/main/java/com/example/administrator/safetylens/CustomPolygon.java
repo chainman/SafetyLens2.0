@@ -43,6 +43,7 @@ public class CustomPolygon {
         this.map = map;
     }
 
+    //Checks if a coordinate is in the Custom Polygon
     public boolean isIn(LatLng latLng){
         return PolyUtil.containsLocation(latLng,latLngs,false);
     }

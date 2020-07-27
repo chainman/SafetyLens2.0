@@ -29,7 +29,6 @@ public class  Gps implements LocationListener {
     private MainActivity contextCompat;
     private LatLng latLng;
 
-
     public double getLon(){
         return lon;
     }
@@ -41,7 +40,6 @@ public class  Gps implements LocationListener {
         return loc;
     }
     public LatLng getLatLng() { return latLng; }
-
 
     //Requests permission from user, in case of GPS, it need to be requested programmatically.
     public Gps(MainActivity contextCompat1) {
@@ -58,11 +56,11 @@ public class  Gps implements LocationListener {
             }
             Location location = locationManager.getLastKnownLocation(mprovider);
             locationManager.requestLocationUpdates(mprovider, 0, 0, this);
-
+            latLng = null;//Set original Latlng to null so user can only access camera if the GPS is working
             if (location != null)
                 ;//onLocationChanged(location);
             else
-                Toast.makeText(contextCompat.getBaseContext(), "No Location Found", Toast.LENGTH_SHORT).show();
+                Toast.makeText(contextCompat.getBaseContext(), "מיקום לא נמצא", Toast.LENGTH_SHORT).show();
         }
     }
 
